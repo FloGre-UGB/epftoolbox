@@ -218,8 +218,8 @@ class LEAR(object):
         #
         if horizon == 2:
             var_list = [2, 3, 4, 7]
-        elif horizon == 1:
-            var_list = [1,2,3,7]
+        elif horizon == 1 or horizon == 11:
+            var_list = [1, 2, 3, 7]
         # For each hour of a day
         for hour in range(24):
             # For each possible past day where prices can be included
@@ -239,7 +239,7 @@ class LEAR(object):
         #
         # Adding the exogenous inputs during days D, D-1,  D-7
         #
-        if horizon == 2:
+        if horizon == 2 or horizon == 11:
             var_list = [2, 3, 7]
         elif horizon == 1:
             var_list = [1,7]
@@ -263,16 +263,16 @@ class LEAR(object):
 
             if horizon == 1:
             # For each of the exogenous inputs we include feature if feature selection indicates it
-            # for exog in range(1, n_exogenous_inputs + 1):
+                for exog in range(1, n_exogenous_inputs + 1):
 
-                 # Definying the corresponding future time indexs using the auxiliary dataframses
-                 futureIndexTrain = pd.to_datetime(indexTrain.loc[:, 'h' + str(hour)].values)
-                 futureIndexTest = pd.to_datetime(indexTest.loc[:, 'h' + str(hour)].values)
+                     # Definying the corresponding future time indexs using the auxiliary dataframses
+                    futureIndexTrain = pd.to_datetime(indexTrain.loc[:, 'h' + str(hour)].values)
+                    futureIndexTest = pd.to_datetime(indexTest.loc[:, 'h' + str(hour)].values)
 
-                 # Including the exogenous input at day D and hour "h"
-                 Xtrain[:, feature_index] = df_train.loc[futureIndexTrain, 'Exogenous ' + str(exog)]
-                 Xtest[:, feature_index] = df_test.loc[futureIndexTest, 'Exogenous ' + str(exog)]
-                 feature_index += 1
+                     # Including the exogenous input at day D and hour "h"
+                    Xtrain[:, feature_index] = df_train.loc[futureIndexTrain, 'Exogenous ' + str(exog)]
+                    Xtest[:, feature_index] = df_test.loc[futureIndexTest, 'Exogenous ' + str(exog)]
+                    feature_index += 1
 
         #
         # Adding the dummy variables that depend on the day of the week. Monday is 0 and Sunday is 6
