@@ -140,7 +140,7 @@ class LEAR(object):
 
         return Yp
 
-    def _build_and_split_XYs(self, df_train, df_test=None, date_test=None):
+    def _build_and_split_XYs(self, df_train, df_test=None, date_test=None, horizon = 1):
         
         """Internal function that generates the X,Y arrays for training and testing based on pandas dataframes
         
@@ -216,11 +216,14 @@ class LEAR(object):
         #
         # Adding the historial prices during days D-2, D-3, and D-7
         #
-
+        if horizon == 2:
+            var_list = [2, 3, 4, 7]
+        elif horizon == 1:
+            var_list = [1,2,3,7]
         # For each hour of a day
         for hour in range(24):
             # For each possible past day where prices can be included
-            for past_day in [2, 3, 4, 7]:
+            for past_day in var_list:
 
                 # We define the corresponding past time indexs using the auxiliary dataframses 
                 pastIndexTrain = pd.to_datetime(indexTrain.loc[:, 'h' + str(hour)].values) - \
@@ -236,10 +239,14 @@ class LEAR(object):
         #
         # Adding the exogenous inputs during days D, D-1,  D-7
         #
+        if horizon == 2:
+            var_list = [2, 3, 7]
+        elif horizon == 1:
+            var_list = [1,7]
         # For each hour of a day
         for hour in range(24):
             # For each possible past day where exogenous inputs can be included
-            for past_day in [2, 3, 7]:
+            for past_day in var_list:
                 # For each of the exogenous input
                 for exog in range(1, n_exogenous_inputs + 1):
 
@@ -254,17 +261,18 @@ class LEAR(object):
                     Xtest[:, feature_index] = df_test.loc[pastIndexTest, 'Exogenous ' + str(exog)]
                     feature_index += 1
 
+            if horizon == 1:
             # For each of the exogenous inputs we include feature if feature selection indicates it
             # for exog in range(1, n_exogenous_inputs + 1):
-            #
-            #     # Definying the corresponding future time indexs using the auxiliary dataframses
-            #     futureIndexTrain = pd.to_datetime(indexTrain.loc[:, 'h' + str(hour)].values)
-            #     futureIndexTest = pd.to_datetime(indexTest.loc[:, 'h' + str(hour)].values)
-            #
-            #     # Including the exogenous input at day D and hour "h"
-            #     Xtrain[:, feature_index] = df_train.loc[futureIndexTrain, 'Exogenous ' + str(exog)]
-            #     Xtest[:, feature_index] = df_test.loc[futureIndexTest, 'Exogenous ' + str(exog)]
-            #     feature_index += 1
+
+                 # Definying the corresponding future time indexs using the auxiliary dataframses
+                 futureIndexTrain = pd.to_datetime(indexTrain.loc[:, 'h' + str(hour)].values)
+                 futureIndexTest = pd.to_datetime(indexTest.loc[:, 'h' + str(hour)].values)
+
+                 # Including the exogenous input at day D and hour "h"
+                 Xtrain[:, feature_index] = df_train.loc[futureIndexTrain, 'Exogenous ' + str(exog)]
+                 Xtest[:, feature_index] = df_test.loc[futureIndexTest, 'Exogenous ' + str(exog)]
+                 feature_index += 1
 
         #
         # Adding the dummy variables that depend on the day of the week. Monday is 0 and Sunday is 6
@@ -290,16 +298,20 @@ class LEAR(object):
         df_Ytrain = pd.DataFrame(Ytrain)
         df_Xtest = pd.DataFrame(Xtest)
 
+        folder_path = ('./input_LEAR')
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+
         # Save each DataFrame with explicit file names
-        df_Xtrain.to_csv("C:/Users/flori/github/epftoolbox/examples/input_LEAR/Xtrain.csv", index=False)
-        df_Ytrain.to_csv("C:/Users/flori/github/epftoolbox/examples/input_LEAR/Ytrain.csv", index=False)
-        df_Xtest.to_csv("C:/Users/flori/github/epftoolbox/examples/input_LEAR/Xtest.csv", index=False)
+        df_Xtrain.to_csv(os.path.join(folder_path,"Xtrain.csv"), index=False)
+        df_Ytrain.to_csv(os.path.join(folder_path, "Ytrain.csv"), index=False)
+        df_Xtest.to_csv(os.path.join(folder_path, "Xtest.csv"), index=False)
         # end my code
 
         return Xtrain, Ytrain, Xtest
 
 
-    def recalibrate_and_forecast_next_day(self, df, calibration_window, next_day_date):
+    def recalibrate_and_forecast_next_day(self, df, calibration_window, next_day_date, horizon = 1):
         """Easy-to-use interface for daily recalibration and forecasting of the LEAR model.
         
         The function receives a pandas dataframe and a date. Usually, the data should
@@ -336,7 +348,7 @@ class LEAR(object):
 
         # Generating X,Y pairs for predicting prices
         Xtrain, Ytrain, Xtest, = self._build_and_split_XYs(
-            df_train=df_train, df_test=df_test, date_test=next_day_date)
+            df_train=df_train, df_test=df_test, date_test=next_day_date, horizon = horizon)
 
         # Recalibrating the LEAR model and extracting the prediction
         Yp = self.recalibrate_predict(Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest)
