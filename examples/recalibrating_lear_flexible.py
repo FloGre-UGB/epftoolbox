@@ -58,6 +58,14 @@ path_recalibration_folder = os.path.join('.', 'experimental_files')
 df_train, df_test = read_data(dataset=dataset, years_test=years_test, path=path_datasets_folder,
                               begin_test_date=begin_test_date, end_test_date=end_test_date)
 
+
+####################################################
+df_train.to_csv(os.path.join(".", 'train_df.csv'))
+df_test.to_csv(os.path.join(".", 'test_df.csv'))
+####################################################
+
+
+
 # Defining unique name to save the forecast
 forecast_file_name = 'fc_nl' + '_dat' + str(dataset) + '_YT' + str(years_test) + \
                      '_CW' + str(calibration_window) + '.csv'
@@ -74,6 +82,9 @@ forecast_dates = forecast.index
 
 model = LEAR(calibration_window=calibration_window)
 
+dict = {}
+for h in range(25):
+    dict[h] = []
 # For loop over the recalibration dates
 for date in forecast_dates:
 
@@ -88,6 +99,12 @@ for date in forecast_dates:
     # for the next day
     Yp = model.recalibrate_and_forecast_next_day(df=data_available, next_day_date=date, 
                                                  calibration_window=calibration_window)
+    #########################
+    dict[0] = date
+    for h in range(24):
+        dict[h+1].append(model.models[h].alpha)
+    #########################
+
     # Saving the current prediction
     forecast.loc[date, :] = Yp
 
@@ -100,3 +117,5 @@ for date in forecast_dates:
 
     # Saving forecast
     forecast.to_csv(forecast_file_path)
+
+pd.DataFrame(dict).to_csv("lambdas.csv", index=False, mode = "w")

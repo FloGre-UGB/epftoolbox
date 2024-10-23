@@ -69,6 +69,7 @@ class LEAR(object):
         Xtrain[:, :-7] = Xtrain_no_dummies
 
         self.models = {}
+        self.params = {}
         for h in range(24):
 
             # Estimating lambda hyperparameter using LARS
@@ -160,6 +161,7 @@ class LEAR(object):
             [Xtrain, Ytrain, Xtest] as the list containing the (X,Y) input/output pairs for training, 
             and the input for testing
         """
+        print("Function _build_and_split_XYs is being called")
 
         # Checking that the first index in the dataframes corresponds with the hour 00:00 
         if df_train.index[0].hour != 0 or df_test.index[0].hour != 0:
@@ -280,7 +282,19 @@ class LEAR(object):
             futureIndexTest = pd.to_datetime(indexTest.loc[:, 'h' + str(hour)].values)
 
             # Extracting Y value based on time indexs
-            Ytrain[:, hour] = df_train.loc[futureIndexTrain, 'Price']        
+            Ytrain[:, hour] = df_train.loc[futureIndexTrain, 'Price']
+
+
+        # my code:
+        df_Xtrain = pd.DataFrame(Xtrain)
+        df_Ytrain = pd.DataFrame(Ytrain)
+        df_Xtest = pd.DataFrame(Xtest)
+
+        # Save each DataFrame with explicit file names
+        df_Xtrain.to_csv("C:/Users/flori/github/epftoolbox/examples/input_LEAR/Xtrain.csv", index=False)
+        df_Ytrain.to_csv("C:/Users/flori/github/epftoolbox/examples/input_LEAR/Ytrain.csv", index=False)
+        df_Xtest.to_csv("C:/Users/flori/github/epftoolbox/examples/input_LEAR/Xtest.csv", index=False)
+        # end my code
 
         return Xtrain, Ytrain, Xtest
 
@@ -432,3 +446,4 @@ def evaluate_lear_in_test_dataset(path_datasets_folder=os.path.join('.', 'datase
         forecast.to_csv(forecast_file_path)
 
     return forecast
+#%%
