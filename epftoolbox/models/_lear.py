@@ -214,13 +214,13 @@ class LEAR(object):
         feature_index = 0
         
         #
-        # Adding the historial prices during days D-1, D-2, D-3, and D-7
+        # Adding the historial prices during days D-2, D-3, and D-7
         #
 
         # For each hour of a day
         for hour in range(24):
             # For each possible past day where prices can be included
-            for past_day in [1, 2, 3, 7]:
+            for past_day in [2, 3, 4, 7]:
 
                 # We define the corresponding past time indexs using the auxiliary dataframses 
                 pastIndexTrain = pd.to_datetime(indexTrain.loc[:, 'h' + str(hour)].values) - \
@@ -239,7 +239,7 @@ class LEAR(object):
         # For each hour of a day
         for hour in range(24):
             # For each possible past day where exogenous inputs can be included
-            for past_day in [1, 7]:
+            for past_day in [2, 3, 7]:
                 # For each of the exogenous input
                 for exog in range(1, n_exogenous_inputs + 1):
 
@@ -255,16 +255,16 @@ class LEAR(object):
                     feature_index += 1
 
             # For each of the exogenous inputs we include feature if feature selection indicates it
-            for exog in range(1, n_exogenous_inputs + 1):
-                
-                # Definying the corresponding future time indexs using the auxiliary dataframses 
-                futureIndexTrain = pd.to_datetime(indexTrain.loc[:, 'h' + str(hour)].values)
-                futureIndexTest = pd.to_datetime(indexTest.loc[:, 'h' + str(hour)].values)
-
-                # Including the exogenous input at day D and hour "h" 
-                Xtrain[:, feature_index] = df_train.loc[futureIndexTrain, 'Exogenous ' + str(exog)]        
-                Xtest[:, feature_index] = df_test.loc[futureIndexTest, 'Exogenous ' + str(exog)] 
-                feature_index += 1
+            # for exog in range(1, n_exogenous_inputs + 1):
+            #
+            #     # Definying the corresponding future time indexs using the auxiliary dataframses
+            #     futureIndexTrain = pd.to_datetime(indexTrain.loc[:, 'h' + str(hour)].values)
+            #     futureIndexTest = pd.to_datetime(indexTest.loc[:, 'h' + str(hour)].values)
+            #
+            #     # Including the exogenous input at day D and hour "h"
+            #     Xtrain[:, feature_index] = df_train.loc[futureIndexTrain, 'Exogenous ' + str(exog)]
+            #     Xtest[:, feature_index] = df_test.loc[futureIndexTest, 'Exogenous ' + str(exog)]
+            #     feature_index += 1
 
         #
         # Adding the dummy variables that depend on the day of the week. Monday is 0 and Sunday is 6
