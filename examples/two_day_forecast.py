@@ -27,7 +27,7 @@ parser.add_argument("--years_test", type=int, default=2,
                     help='Number of years (a year is 364 days) in the test dataset. Used if ' +
                     ' begin_test_date and end_test_date are not provided.')
 
-parser.add_argument("--calibration_window", type=int, default=4 * 364, 
+parser.add_argument("--calibration_window", type=int, default=3 * 364,
                     help='Number of days used in the training dataset for recalibration')
 
 parser.add_argument("--begin_test_date", type=str, default=None, 
@@ -52,11 +52,16 @@ end_test_date = args.end_test_date
 
 path_datasets_folder = os.path.join('.', 'datasets')
 path_recalibration_folder = os.path.join('.', 'experimental_files')
-    
-    
 # Defining train and testing data
 df_train, df_test = read_data(dataset=dataset, years_test=years_test, path=path_datasets_folder,
                               begin_test_date=begin_test_date, end_test_date=end_test_date)
+
+
+# pull additional data for a day to do two day ahead forecast. Use end_test_date_plus1 for this
+end_test_date_plus1 = pd.to_datetime(end_test_date, dayfirst=True) + pd.Timedelta(days=1)
+
+_, df_test2 = read_data(dataset=dataset, years_test=years_test, path=path_datasets_folder,
+                              begin_test_date=begin_test_date, end_test_date=end_test_date_plus1)
 
 
 ####################################################
@@ -81,12 +86,21 @@ real_values = pd.DataFrame(real_values, index=forecast.index, columns=forecast.c
 
 forecast_dates = forecast.index
 
+# Defining empty forecast2 array for the two day ahead forecasts
+forecast2 = pd.DataFrame(index=df_test.index[::24] + pd.Timedelta(days=1), columns=['h' + str(k) for k in range(24)])
+
+
+forecast2_file_name = 'fc_nl' + '_dat' + str(dataset) + '_YT' + str(years_test) + \
+                     '_CW' + str(calibration_window) + 'two_days_ahead.csv'
+
+forecast2_file_path = os.path.join(path_recalibration_folder, forecast2_file_name)
+
+
 model = LEAR(calibration_window=calibration_window)
 
 lambdas_dict = {}
 for h in range(25):
     lambdas_dict[h] = []
-
 # For loop over the recalibration dates
 for date in forecast_dates:
 
@@ -97,12 +111,17 @@ for date in forecast_dates:
     # We set the real prices for current date to NaN in the dataframe of available data
     data_available.loc[date:date + pd.Timedelta(hours=23), 'Price'] = np.NaN
 
-
-    data_available.to_csv("data_available_rec.csv")
+    data_available.to_csv("data_available_two.csv")
     # Recalibrating the model with the most up-to-date available data and making a prediction
     # for the next day
     Yp = model.recalibrate_and_forecast_next_day(df=data_available, next_day_date=date, 
                                                  calibration_window=calibration_window)
+
+
+
+    # take the forecast and write it into the data_available dataframe into the last line
+    #synthetic_data = {"Price": np.reshape(Yp, 24), }
+
 
 
     #########################
@@ -124,8 +143,30 @@ for date in forecast_dates:
     # Saving forecast
     forecast.to_csv(forecast_file_path)
 
+    # Now prepare the dataframe that will be used as input for recalibrate_and_forecast_next_day when it is called a second time
+    data_available_two_day = data_available
+    data_available_two_day.loc[date:date + pd.Timedelta(hours=23), 'Price'] = np.reshape(Yp, 24)
 
-if not os.path.exists("./lambdas"):
-    os.makedirs("./lambdas")
+    # make synthetic data set that will be concatenated with the data_available_two_day
+    synthetic_data_df = df_test2.loc[date + pd.Timedelta(days=1) : date + pd.Timedelta(days=1) +pd.Timedelta(hours=23) , :].copy()
+    synthetic_data_df.loc[date + pd.Timedelta(days=1) : date + pd.Timedelta(days=1) +pd.Timedelta(hours=23), 'Price'] = np.NaN
 
-pd.DataFrame(lambdas_dict).to_csv("./lambdas/lambdas.csv", index=False, mode = "w")
+    synthetic_data_df.to_csv("test_synthetic.csv")
+    # concatenate with data_available
+    data_available_two_day = pd.concat([data_available_two_day, synthetic_data_df], axis = 0)
+
+    data_available_two_day.to_csv("test_nachher.csv")
+
+    # make two day ahead forecast
+    Yp2 = model.recalibrate_and_forecast_next_day(df=data_available_two_day, next_day_date=date + pd.Timedelta(days=1),
+                                                 calibration_window=calibration_window)
+
+    # Saving the current 2 day ahead prediction
+    forecast2.loc[date + pd.Timedelta(days=1), :] = Yp2
+
+    # Saving forecast
+    forecast2.to_csv(forecast2_file_path)
+
+
+
+pd.DataFrame(lambdas_dict).to_csv("lambdas.csv", index=False, mode = "w")
