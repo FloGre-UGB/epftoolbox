@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import argparse
 import os
+import csv
 
 from epftoolbox.data import read_data
 from epftoolbox.evaluation import MAE, sMAPE
@@ -74,6 +75,13 @@ forecast_dates = forecast.index
 
 model = LEAR(calibration_window=calibration_window)
 
+# dictionary thats gonna store the lambdas
+dict = {}
+
+
+for h in range(25):
+    dict[h] = []
+
 # For loop over the recalibration dates
 for date in forecast_dates:
 
@@ -88,6 +96,37 @@ for date in forecast_dates:
     # for the next day
     Yp = model.recalibrate_and_forecast_next_day(df=data_available, next_day_date=date, 
                                                  calibration_window=calibration_window)
+
+    #########################
+    # saving the lambdas
+    dict[0] = date
+
+    for h in range(24):
+        coeffs = []
+
+        # saving the lambdas
+        dict[h+1].append(model.models[h].alpha)
+
+        # date and hour of the model
+        coeffs.append(date)
+
+        coeffs.append(h)
+        # extract the coefficients
+        coeffs.extend(model.models[h].coef_)
+
+
+        # write them to a csv
+        name_begin = str(begin_test_date).replace('/', '_')
+        name_end = str(end_test_date).replace('/', '_')
+        with open(f'./coefficients/coefficients_{name_begin}_{name_end}.csv', mode='a', newline='') as file:
+            writer = csv.writer(file)
+
+            # Write the vector as a single row
+            writer.writerow(coeffs)
+
+    #########################
+
+
     # Saving the current prediction
     forecast.loc[date, :] = Yp
 
@@ -100,3 +139,5 @@ for date in forecast_dates:
 
     # Saving forecast
     forecast.to_csv(forecast_file_path)
+
+pd.DataFrame(dict).to_csv("lambdas.csv", index=False, mode = "w")

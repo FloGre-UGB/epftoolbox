@@ -280,7 +280,23 @@ class LEAR(object):
             futureIndexTest = pd.to_datetime(indexTest.loc[:, 'h' + str(hour)].values)
 
             # Extracting Y value based on time indexs
-            Ytrain[:, hour] = df_train.loc[futureIndexTrain, 'Price']        
+            Ytrain[:, hour] = df_train.loc[futureIndexTrain, 'Price']
+
+        # my code:
+        df_Xtrain = pd.DataFrame(Xtrain)
+        df_Ytrain = pd.DataFrame(Ytrain)
+        df_Xtest = pd.DataFrame(Xtest)
+
+        folder_path = ('./input_LEAR')
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+
+        # Save each DataFrame with explicit file names
+        df_Xtrain.to_csv(os.path.join(folder_path,"Xtrain.csv"), index=False)
+        df_Ytrain.to_csv(os.path.join(folder_path, "Ytrain.csv"), index=False)
+        df_Xtest.to_csv(os.path.join(folder_path, "Xtest.csv"), index=False)
+        # end my code
+
 
         return Xtrain, Ytrain, Xtest
 
