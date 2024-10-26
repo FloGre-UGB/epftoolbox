@@ -87,7 +87,10 @@ real_values = pd.DataFrame(real_values, index=forecast.index, columns=forecast.c
 forecast_dates = forecast.index
 
 # Defining empty forecast2 array for the two day ahead forecasts
-forecast2 = pd.DataFrame(index=df_test.index[::24] + pd.Timedelta(days=1), columns=['h' + str(k) for k in range(24)])
+forecast2 = pd.DataFrame(index=df_test2.index[::24] + pd.Timedelta(days=1), columns=['h' + str(k) for k in range(24)])
+
+real_values2 = df_test2.loc[:, ['Price']].values.reshape(-1, 24)
+real_values2 = pd.DataFrame(real_values2, index=forecast2.index, columns=forecast2.columns)
 
 
 forecast2_file_name = 'fc_nl' + '_dat' + str(dataset) + '_YT' + str(years_test) + \
@@ -111,7 +114,7 @@ for date in forecast_dates:
     # We set the real prices for current date to NaN in the dataframe of available data
     data_available.loc[date:date + pd.Timedelta(hours=23), 'Price'] = np.NaN
 
-    data_available.to_csv("data_available_two.csv")
+    data_available.to_csv("data_available_one_day_ahead_forecast.csv")
     # Recalibrating the model with the most up-to-date available data and making a prediction
     # for the next day
     Yp = model.recalibrate_and_forecast_next_day(df=data_available, next_day_date=date, 
@@ -138,7 +141,7 @@ for date in forecast_dates:
     smape = np.mean(sMAPE(forecast.loc[:date].values.squeeze(), real_values.loc[:date].values)) * 100
 
     # Pringint information
-    print('{} - sMAPE: {:.2f}%  |  MAE: {:.3f}'.format(str(date)[:10], smape, mae))
+    print(' One day ahead forecast: {} - sMAPE: {:.2f}%  |  MAE: {:.3f}'.format(str(date)[:10], smape, mae))
 
     # Saving forecast
     forecast.to_csv(forecast_file_path)
@@ -151,18 +154,24 @@ for date in forecast_dates:
     synthetic_data_df = df_test2.loc[date + pd.Timedelta(days=1) : date + pd.Timedelta(days=1) +pd.Timedelta(hours=23) , :].copy()
     synthetic_data_df.loc[date + pd.Timedelta(days=1) : date + pd.Timedelta(days=1) +pd.Timedelta(hours=23), 'Price'] = np.NaN
 
-    synthetic_data_df.to_csv("test_synthetic.csv")
+    synthetic_data_df.to_csv("synthetic_data.csv")
     # concatenate with data_available
     data_available_two_day = pd.concat([data_available_two_day, synthetic_data_df], axis = 0)
 
-    data_available_two_day.to_csv("test_nachher.csv")
+    data_available_two_day.to_csv("data_available_two_day_ahead_forecast.csv")
 
     # make two day ahead forecast
     Yp2 = model.recalibrate_and_forecast_next_day(df=data_available_two_day, next_day_date=date + pd.Timedelta(days=1),
-                                                 calibration_window=calibration_window)
+                                                 calibration_window=calibration_window, data_available=2)
 
     # Saving the current 2 day ahead prediction
     forecast2.loc[date + pd.Timedelta(days=1), :] = Yp2
+
+    # Printing information
+    mae2 = np.mean(MAE(forecast2.loc[:date+pd.Timedelta(days=1)].values.squeeze(), real_values2.loc[:date+pd.Timedelta(days=1)].values))
+    smape2 = np.mean(sMAPE(forecast2.loc[:date+pd.Timedelta(days=1)].values.squeeze(), real_values2.loc[:date+pd.Timedelta(days=1)].values)) * 100
+
+    print(' Two day ahead forecast: {} - sMAPE: {:.2f}%  |  MAE: {:.3f}'.format(str(date+pd.Timedelta(days=1))[:10], smape2, mae2))
 
     # Saving forecast
     forecast2.to_csv(forecast2_file_path)

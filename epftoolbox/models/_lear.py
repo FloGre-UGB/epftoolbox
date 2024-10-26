@@ -140,7 +140,7 @@ class LEAR(object):
 
         return Yp
 
-    def _build_and_split_XYs(self, df_train, df_test=None, date_test=None, horizon = 1):
+    def _build_and_split_XYs(self, df_train, df_test=None, date_test=None, horizon = 1, data_available = 1):
         
         """Internal function that generates the X,Y arrays for training and testing based on pandas dataframes
         
@@ -301,17 +301,21 @@ class LEAR(object):
         folder_path = ('./input_LEAR')
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
-
+        if data_available == 1:
         # Save each DataFrame with explicit file names
-        df_Xtrain.to_csv(os.path.join(folder_path,"Xtrain.csv"), index=False)
-        df_Ytrain.to_csv(os.path.join(folder_path, "Ytrain.csv"), index=False)
-        df_Xtest.to_csv(os.path.join(folder_path, "Xtest.csv"), index=False)
+            df_Xtrain.to_csv(os.path.join(folder_path,"Xtrain.csv"), index=False)
+            df_Ytrain.to_csv(os.path.join(folder_path, "Ytrain.csv"), index=False)
+            df_Xtest.to_csv(os.path.join(folder_path, "Xtest.csv"), index=False)
+        elif data_available == 2:
+            df_Xtrain.to_csv(os.path.join(folder_path,"Xtrain_two_day_ahead.csv"), index=False)
+            df_Ytrain.to_csv(os.path.join(folder_path, "Ytrain_two_day_ahead.csv"), index=False)
+            df_Xtest.to_csv(os.path.join(folder_path, "Xtest_two_day_ahead.csv"), index=False)
         # end my code
 
         return Xtrain, Ytrain, Xtest
 
 
-    def recalibrate_and_forecast_next_day(self, df, calibration_window, next_day_date, horizon = 1):
+    def recalibrate_and_forecast_next_day(self, df, calibration_window, next_day_date, horizon = 1, data_available = 1):
         """Easy-to-use interface for daily recalibration and forecasting of the LEAR model.
         
         The function receives a pandas dataframe and a date. Usually, the data should
@@ -348,7 +352,7 @@ class LEAR(object):
 
         # Generating X,Y pairs for predicting prices
         Xtrain, Ytrain, Xtest, = self._build_and_split_XYs(
-            df_train=df_train, df_test=df_test, date_test=next_day_date, horizon = horizon)
+            df_train=df_train, df_test=df_test, date_test=next_day_date, horizon = horizon, data_available=data_available)
 
         # Recalibrating the LEAR model and extracting the prediction
         Yp = self.recalibrate_predict(Xtrain=Xtrain, Ytrain=Ytrain, Xtest=Xtest)
