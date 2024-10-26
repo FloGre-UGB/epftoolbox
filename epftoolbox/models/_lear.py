@@ -359,6 +359,50 @@ class LEAR(object):
 
         return Yp
 
+    def forecast_next_day(self, df, calibration_window, next_day_date, horizon = 1, data_available = 1):
+        """Easy-to-use interface for forecasting based on a calibrated the LEAR model.
+
+        The function receives a pandas dataframe and a date. Usually, the data should
+        correspond with the date of the next-day when using for daily recalibration.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            Dataframe of historical data containing prices and *N* exogenous inputs.
+            The index of the dataframe should be dates with hourly frequency. The columns
+            should have the following names ``['Price', 'Exogenous 1', 'Exogenous 2', ...., 'Exogenous N']``.
+
+        calibration_window : int
+            Calibration window (in days) for the LEAR model.
+
+        next_day_date : datetime
+            Date of the day-ahead.
+
+        Returns
+        -------
+        numpy.array
+            The prediction of day-ahead prices.
+        """
+
+        # We define the new training dataset and test datasets
+        df_train = df.loc[:next_day_date - pd.Timedelta(hours=1)]
+        # Limiting the training dataset to the calibration window
+        df_train = df_train.iloc[-self.calibration_window * 24:]
+
+        # We define the test dataset as the next day (they day of interest) plus the last two weeks
+        # in order to be able to build the necessary input features.
+        df_test = df.loc[next_day_date - pd.Timedelta(weeks=2):, :]
+
+
+        # Generating X,Y pairs for predicting prices
+        _, _, Xtest, = self._build_and_split_XYs(
+            df_train=df_train, df_test=df_test, date_test=next_day_date, horizon = horizon, data_available=data_available)
+
+        # Recalibrating the LEAR model and extracting the prediction
+        Yp = self.predict(Xtest)
+
+        return Yp
+
 
 def evaluate_lear_in_test_dataset(path_datasets_folder=os.path.join('.', 'datasets'), 
                                   path_recalibration_folder=os.path.join('.', 'experimental_files'),
@@ -462,4 +506,5 @@ def evaluate_lear_in_test_dataset(path_datasets_folder=os.path.join('.', 'datase
         forecast.to_csv(forecast_file_path)
 
     return forecast
-#%%
+
+
